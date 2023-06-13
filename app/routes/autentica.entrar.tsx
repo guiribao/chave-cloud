@@ -15,9 +15,8 @@ export const links: LinksFunction = () => {
 export const action: ActionFunction = async ({ request }) => {
   await authenticator.authenticate('form', request, {
     successRedirect: '/dashboard',
-    failureRedirect: '/autentica/entrar'
+    failureRedirect: '/autentica/entrar',
   });
-  
 };
 
 export async function loader({ request }: LoaderArgs) {
@@ -56,6 +55,9 @@ export default function Entrar() {
         <div className='form-group'>
           <label>Senha</label>
           <input type='password' name='senha' id='senha' autoComplete='off' />
+          <p>
+            Esqueceu sua senha? <Link to='/autentica/esqueci-minha-senha'>Clique aqui</Link>
+          </p>
         </div>
         <div className='form-group form-button'>
           <button type='submit' className='btn-cadastro' disabled={isSubmitting}>
