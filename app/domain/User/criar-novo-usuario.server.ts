@@ -1,15 +1,14 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from '~/secure/db.server';
+import { encrypt } from '~/shared/Password.util'
 
 export default async function criarNovoUsuario(email: string, senha: string) {
-  const salt = await bcrypt.genSalt(12);
-  const senhaCriptografada = await bcrypt.hash(senha, salt);
-
+  const hash = await encrypt(senha)
   try {
     const usuario = await prisma.usuario.create({
       data: {
         email,
-        senha: senhaCriptografada,
+        senha: hash,
       },
     });  
     return usuario;
