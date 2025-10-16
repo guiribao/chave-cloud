@@ -5,11 +5,13 @@ import { Link, useLoaderData, useNavigate } from '@remix-run/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
+import BotaoExportar from '~/component/BotaoExportar';
 import DeletingModal from '~/component/DeletingModal';
 import pegarEventosFeiras from '~/domain/Calendario/pegar-eventos-feiras.server';
 import pegarFeirantesPorFeira from '~/domain/Calendario/pegar-feirantes-por-feiras.server';
 import deletarOperacaoPorId from '~/domain/Financeiro/deletar-operacao-por-id.server';
 import pegarOperacoes from '~/domain/Financeiro/pegar-operacoes.server';
+import { calcularCaixaFeirante, formatarColunaDeValor } from '~/shared/Feira.util';
 import { gerarDescricaoOperacaoFeira } from '~/shared/Operacao.util';
 
 export const meta: MetaFunction = () => {
@@ -60,7 +62,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function FinanceiroIndex() {
   const { operacoes, feiras } = useLoaderData();
-  const navigate = useNavigate();
 
   // Dados para modal deletar item
   let [deleting, setDeleting] = useState(false);
@@ -78,10 +79,6 @@ export default function FinanceiroIndex() {
     setDeletingItem({});
   }
 
-  function verOperacao(operacaoId) {
-    navigate(`/financeiro/${operacaoId}`);
-  }
-
   async function carregarFeirantes(event) {
     let feiraId = event.target.value
 
@@ -96,6 +93,61 @@ export default function FinanceiroIndex() {
     setFeirantes(feirantes)
   }
 
+  async function fecharCaixaFeirante(feiraId, perfilId) {
+    await fetch(`/feira/${feiraId}/feirante/${perfilId}/fechar`)
+  }
+
+  async function exportarFeira(e) {
+    if (!feirantes.length) return alert("Não há dados para exportar")
+
+    let reqBody = {
+      nome: "Feira",
+      tipo: "Relatório financeiro",
+      formato: "xls",
+      data: []
+    }
+
+    let linhaTitulo = ["Nome banca", "Nome responsável", "Qtd no PIX", "R$ no PIX",
+      "Qtd no Dinheiro", "R$ no Dinheiro", "Qtd no Credito", "R$ no Credito",
+      "Qtd total", "R$ total",
+      "R$ Arrecadação", "R$ Lucro",
+      "R$ na Banca", "R$ no CHAVE",
+      "R$ Balancete", "Resumo Balancete", "Banco", "Agência", "Conta", "CHAVE PIX"]
+
+    reqBody.data.push(linhaTitulo)
+
+    for (let feirante of feirantes) {
+      let caixa = calcularCaixaFeirante(feirante)
+      let linha = [
+        feirante.perfil.nome_banca || "",
+        `${feirante.perfil.nome} ${feirante.perfil.sobrenome}`,
+        caixa?.totalVendidoPorTipo["PIX"].qtd,
+        formatarColunaDeValor(caixa?.totalVendidoPorTipo["PIX"].valor),
+        caixa?.totalVendidoPorTipo["DINHEIRO"].qtd,
+        formatarColunaDeValor(caixa?.totalVendidoPorTipo["DINHEIRO"].valor),
+        caixa?.totalVendidoPorTipo["CREDITO"].qtd,
+        formatarColunaDeValor(caixa?.totalVendidoPorTipo["CREDITO"].valor),
+        feirante.Operacao.length || 0,
+        formatarColunaDeValor(feirante.valorVendas),
+        formatarColunaDeValor(caixa?.totalArrecadacao),
+        formatarColunaDeValor(caixa?.totalLucro),
+        formatarColunaDeValor(caixa?.saldoNoFeirante),
+        formatarColunaDeValor(caixa?.saldoNoChave),
+        formatarColunaDeValor(caixa?.balancete.resultado),
+        caixa?.balancete.texto,
+        feirante.pagamento_banco,
+        feirante.pagamento_agencia,
+        feirante.pagamento_conta,
+        feirante.pagamento_chave_pix
+      ]
+
+      reqBody.data.push(linha)
+    }
+
+    console.log(reqBody.data)
+    let plan = "" //await fetch(`/relatorio/gerar`, { method: "POST", body: JSON.stringify(reqBody) })
+  }
+
   return (
     <main>
       {deleting && (
@@ -103,7 +155,7 @@ export default function FinanceiroIndex() {
       )}
 
       {/* Financeiro geral CHAVE: Admin */}
-      <div className='view_container'>
+      {/* <div className='view_container'>
         <div className='view'>
           <div className='view-header'>
             <h1> </h1>
@@ -175,14 +227,15 @@ export default function FinanceiroIndex() {
           </div>
           <div className='view-footer'></div>
         </div>
-      </div>
+      </div> */}
 
       {/* Financeiro das feiras: Admin e Feirante */}
       <div className='view_container'>
         <div className='view'>
           <div className='view-header'>
             <h1>Financeiro feiras</h1>
-            <div>
+            <div className='view-header-actions'>
+              <BotaoExportar callback={exportarFeira} label="Gerar relatório" />
               <label className='select'>
                 <select onChange={carregarFeirantes}>
                   <option value="0" defaultChecked>Selecionar feira</option>
@@ -237,6 +290,18 @@ export default function FinanceiroIndex() {
                           <Link to={`/feira/${feirante.eventoId}/feirante/${feirante.perfilId}`}>
                             <i className="las la-search-dollar"></i>
                           </Link>
+
+                          {
+                            feirante.caixa_aberto && (<button onClick={() => fecharCaixaFeirante(feirante.id)} title="Fechar caixa">
+                              <i className="las la-lock"></i>
+                            </button>)
+                          }
+
+                          {
+                            !feirante.caixa_aberto && (<button onClick={() => openDeletingModal(operacao)} title="Fechar caixa">
+                              <i className="las la-lock-open"></i>
+                            </button>)
+                          }
                         </div>
                       </td>
                     </tr>

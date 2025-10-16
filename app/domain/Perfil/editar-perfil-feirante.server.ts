@@ -1,6 +1,6 @@
 import { prisma } from '~/secure/db.server';
 
-export default async function editarConfiguracoesBanca({ perfilId, nomeBanca, logoBanca, }) {
+export default async function editarConfiguracoesBanca({ perfilId, nomeBanca, logoBanca }) {
   try {
     let perfil = "";
     

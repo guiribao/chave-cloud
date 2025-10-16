@@ -9,9 +9,7 @@ export default async function pegarFeirantesPorFeira(feiraId: string): Promise<E
       },
       include: {
         perfil: true,
-        Operacao: {
-          select: { valor: true },
-        },
+        Operacao: true,
       },
     });
 
