@@ -15,6 +15,8 @@ import atualizarOperacao from '~/domain/Financeiro/atualizar-operacao.server';
 
 import novaOperacaoPageStyle from '~/assets/css/nova-operacao-page.css';
 import loading from '~/assets/img/loading.gif';
+import Minicards from '~/component/Minicards';
+import { parseMonetaryNumber } from '~/shared/Number.util';
 
 
 export const meta: MetaFunction = () => {
@@ -78,8 +80,31 @@ export default function FinanceiroEditarIndex() {
     setPerfis(response?.perfis);
   }
 
+  const minicardsData = [
+    {
+      quantidade: operacao.tipo,
+      label: 'Tipo atual',
+      icon: 'las la-exchange-alt',
+    },
+    {
+      quantidade: operacao.finalidade,
+      label: 'Finalidade',
+      icon: 'las la-tag',
+    },
+    {
+      quantidade: parseMonetaryNumber(operacao.valor).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }),
+      label: 'Valor atual',
+      icon: 'las la-coins',
+    },
+  ];
+
   return (
     <main>
+      <Minicards cards={minicardsData} role='MINICARDS_FINANCEIRO_EDITAR' />
+
       <div className='view_container'>
         <div className='view'>
           <div className='view-header'>
@@ -138,7 +163,7 @@ export default function FinanceiroEditarIndex() {
                 <input type='hidden' name='valor_real' defaultValue={valorReal} />
                 <CurrencyInput
                   name='valor'
-                  defaultValue={parseFloat(operacao.valor)}
+                  defaultValue={parseMonetaryNumber(operacao.valor)}
                   onChangeValue={(event, original, masked) => {
                     setValorReal(Number(original));
                   }}

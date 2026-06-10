@@ -1,16 +1,27 @@
-//@ts-nocheck
 import { Papel } from '@prisma/client';
-import { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
+import { ActionFunctionArgs } from '@remix-run/node';
 import xlsx from 'node-xlsx';
 import { authenticator } from '~/secure/authentication.server';
 
-export async function action({ request }: ActionFunctionArgs) {
-  let usuario: Usuario = await authenticator.isAuthenticated(request, {
-    failureRedirect: '/autentica/entrar',
-  });
+type RelatorioAba = {
+  nome: string;
+  data: Array<Array<string | number>>;
+};
 
-  if (usuario.papel != Papel.ADMIN) {
-    return new Response(JSON.stringify({ "message": "Permissão negada." }), {
+type RelatorioPayload = {
+  nome?: string;
+  aba?: string;
+  data?: Array<Array<string | number>>;
+  abas?: RelatorioAba[];
+};
+
+export async function action({ request }: ActionFunctionArgs) {
+  const usuario = await authenticator.isAuthenticated(request, {
+    failureRedirect: '/autentica/entrar',
+  }) as { papel: Papel };
+
+  if (usuario.papel !== Papel.ADMIN) {
+    return new Response(JSON.stringify({ message: 'Permissao negada.' }), {
       status: 403,
       headers: {
         'Content-Type': 'application/json',
@@ -18,16 +29,43 @@ export async function action({ request }: ActionFunctionArgs) {
     });
   }
 
-  let { body } = request
+  const payload = (await request.json()) as RelatorioPayload;
 
-  var buffer = xlsx.build([{ name: 'Testes', data: body }]);
+  const abas =
+    payload?.abas?.filter((aba) => Array.isArray(aba?.data) && aba.data.length > 0) ?? [];
 
-  
+  if (!abas.length && !payload?.data?.length) {
+    return new Response(JSON.stringify({ message: 'Dados do relatorio nao informados.' }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
 
-  return new Response(buffer, {
+  const planilha = xlsx.build(
+    (abas.length
+      ? abas
+      : [
+          {
+            nome: payload.aba || 'Relatorio',
+            data: payload.data ?? [],
+          },
+        ]
+    ).map((aba) => ({
+      name: aba.nome,
+      data: aba.data,
+      options: {},
+    })) as any
+  );
+
+  const nomeArquivo = (payload.nome || 'relatorio').replace(/\s+/g, '_');
+
+  return new Response(planilha, {
     status: 200,
     headers: {
-      'Content-Type': 'application/xlsx',
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${nomeArquivo}.xlsx"`,
     },
   });
 }

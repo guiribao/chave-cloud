@@ -37,7 +37,7 @@ export function specificDynPages(pathname: string, papelUsuario: string) {
     return papeisPermitidos?.includes(papelUsuario);
   }
 
-  if (/\/feira\/[0-9]\/feirante\/[0-9]+/i.test(pathname)) {
+  if (/^\/feira\/(\d+)\/feirante\/(\d+)$/.test(pathname)) {
     const papeisPermitidos = PaginasPorPapel['/feira/{id}/feirante/{id}'];
     return papeisPermitidos?.includes(papelUsuario);
   }

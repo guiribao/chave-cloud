@@ -10,6 +10,8 @@ import pegarOperacaoPorId from '~/domain/Financeiro/pegar-operacao-por-id.server
 
 import novaOperacaoPageStyle from '~/assets/css/nova-operacao-page.css';
 import { gerarDescricaoOperacaoFeira } from '~/shared/Operacao.util';
+import { parseMonetaryNumber } from '~/shared/Number.util';
+import Minicards from '~/component/Minicards';
 
 export const meta: MetaFunction = () => {
   return [
@@ -46,9 +48,32 @@ export default function FinanceiroEditarIndex() {
 
   if (operacao.finalidade == FinalidadeOperacao.FEIRA)
     operacao.descricao = gerarDescricaoOperacaoFeira(operacao);
-  
+
+  const minicardsData = [
+    {
+      quantidade: operacao.tipo,
+      label: 'Tipo',
+      icon: 'las la-exchange-alt',
+    },
+    {
+      quantidade: operacao.finalidade,
+      label: 'Finalidade',
+      icon: 'las la-tag',
+    },
+    {
+      quantidade: parseMonetaryNumber(operacao.valor).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }),
+      label: 'Valor',
+      icon: 'las la-coins',
+    },
+  ];
+
   return (
     <main>
+      <Minicards cards={minicardsData} role='MINICARDS_FINANCEIRO_DETALHE' />
+
       <div className='view_container'>
         <div className='view'>
           <div className='view-header'>
@@ -111,7 +136,7 @@ export default function FinanceiroEditarIndex() {
                 <CurrencyInput
                   name='valor'
                   id='valor'
-                  defaultValue={operacao.valor * 1}
+                  defaultValue={parseMonetaryNumber(operacao.valor)}
                   disabled
                 ></CurrencyInput>
               </div>

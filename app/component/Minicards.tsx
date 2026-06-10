@@ -1,21 +1,24 @@
-import { Perfil } from '@prisma/client';
-import { useLocation } from '@remix-run/react';
-import { ReactElement, useEffect } from 'react';
+type MinicardItem = {
+  quantidade?: string | number;
+  label: string;
+  icon: string;
+  classes?: string;
+  callback?: () => void;
+};
 
 interface MinicardsProps {
-  data: object;
-  role: string;
+  cards: MinicardItem[];
+  role?: string;
 }
 
 export default function Minicards({ cards, role }: MinicardsProps) {
-  let location = useLocation();
 
   // Minicards deve ser um componente universal
   // Criar objeto data em dashboard com os seguintes campos
   // quantidade, label, icon
 
   return (
-    <div className='minicards' data-role={role}>
+    <div className='minicards' data-role={role || 'MINICARDS_DEFAULT'}>
       {cards.map((card) => (
         <div className={`card-single ${card.classes}`} key={card.label} onClick={card.callback}>
           <div>

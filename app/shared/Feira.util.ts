@@ -1,4 +1,4 @@
-import { cortarDecimal, substituirPontoDecimalPorVirtgula } from "./Number.util";
+import { cortarDecimal, parseMonetaryNumber, substituirPontoDecimalPorVirtgula } from "./Number.util";
 
 export function calcularCaixaFeirante(feirante) {
   let totalVendido = 0;
@@ -19,21 +19,23 @@ export function calcularCaixaFeirante(feirante) {
 
   if (feirante.Operacao) {
     feirante.Operacao.forEach((operacao) => {
+      const valorOperacao = parseMonetaryNumber(operacao.valor);
+
       if (operacao.forma_pagamento == 'PIX') {
-        totalVendidoPorTipo['PIX'].valor += Number(operacao.valor);
+        totalVendidoPorTipo['PIX'].valor += valorOperacao;
         totalVendidoPorTipo['PIX'].qtd += 1
-        saldoNoChave += Number(operacao.valor);
+        saldoNoChave += valorOperacao;
       } else if (operacao.forma_pagamento == 'DINHEIRO') {
-        totalVendidoPorTipo['DINHEIRO'].valor += Number(operacao.valor);
+        totalVendidoPorTipo['DINHEIRO'].valor += valorOperacao;
         totalVendidoPorTipo['DINHEIRO'].qtd += 1
-        saldoNoFeirante += Number(operacao.valor);
+        saldoNoFeirante += valorOperacao;
       } else {
-        totalVendidoPorTipo['CREDITO'].valor += Number(operacao.valor);
+        totalVendidoPorTipo['CREDITO'].valor += valorOperacao;
         totalVendidoPorTipo['CREDITO'].qtd += 1
-        saldoNoFeirante += Number(operacao.valor);
+        saldoNoFeirante += valorOperacao;
       }
 
-      totalVendido += Number(operacao.valor);
+      totalVendido += valorOperacao;
       totalArrecadacao = (feirante.perfil.membro) ? totalVendido * .2 : totalVendido * .3;
       totalLucro = totalVendido - totalArrecadacao;
       balanco = totalVendido - saldoNoFeirante - totalArrecadacao;

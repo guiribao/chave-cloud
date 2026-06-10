@@ -10,8 +10,7 @@ import { Escolaridade, Perfil } from '@prisma/client';
 import { addHours, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseTime } from '~/shared/Date.util';
-import pegarPerfilPeloId from '~/domain/Perfil/perfil-pelo-id.server';
-
+import pegarPerfilPeloId from '~/domain/Perfil/perfil-pelo-id.server';import Minicards from '~/component/Minicards';
 export const meta: MetaFunction = () => {
   return [
     {
@@ -56,6 +55,29 @@ export default function PerfilIndex() {
     SUPERIOR_COMPLETO: 'Superior completo',
   };
 
+  const minicardsData = [
+    {
+      quantidade: perfil?.grupo ?? '-',
+      label: 'Grupo',
+      icon: 'las la-layer-group',
+    },
+    {
+      quantidade: perfil?.membro ? 'Sim' : 'Nao',
+      label: 'Membro',
+      icon: 'las la-user-check',
+    },
+    {
+      quantidade: perfil?.profissao || '-',
+      label: 'Profissao',
+      icon: 'las la-briefcase',
+    },
+    {
+      quantidade: perfil?.escolaridade || '-',
+      label: 'Escolaridade',
+      icon: 'las la-graduation-cap',
+    },
+  ];
+
   return (
     <main>
       <div className='header'>
@@ -65,6 +87,8 @@ export default function PerfilIndex() {
         </h1>
 
       </div>
+      <Minicards cards={minicardsData} role='MINICARDS_GENTE_DETALHE' />
+
       <div className='cards-content'>
 
 

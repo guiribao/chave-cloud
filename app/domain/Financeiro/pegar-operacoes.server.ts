@@ -1,17 +1,39 @@
 import { prisma } from '~/secure/db.server';
 import { Operacao } from '@prisma/client';
 
-export default async function pegarOperacoes(): Promise<Operacao[] | null> {
+type PegarOperacoesArgs = {
+  pagina?: number;
+  porPagina?: number;
+  ordenarPor?: 'id' | 'valor' | 'tipo' | 'finalidade' | 'criado_em';
+  direcao?: 'asc' | 'desc';
+};
+
+export default async function pegarOperacoes({
+  pagina = 1,
+  porPagina = 20,
+  ordenarPor = 'criado_em',
+  direcao = 'desc',
+}: PegarOperacoesArgs = {}): Promise<{ operacoes: Operacao[]; total: number } | null> {
   try {
-    const operacao = await prisma.operacao.findMany({
-      include: {
-        feirante: {
-          include: { perfil: { select: { nome: true, sobrenome: true } } },
+    const paginaAjustada = Math.max(1, pagina);
+    const porPaginaAjustada = Math.min(100, Math.max(5, porPagina));
+
+    const [operacoes, total] = await Promise.all([
+      prisma.operacao.findMany({
+        include: {
+          feirante: {
+            include: { perfil: { select: { nome: true, sobrenome: true, nome_banca: true } } },
+          },
+          evento: true,
         },
-        evento: true,
-      },
-    });
-    return operacao || [];
+        orderBy: { [ordenarPor]: direcao },
+        skip: (paginaAjustada - 1) * porPaginaAjustada,
+        take: porPaginaAjustada,
+      }),
+      prisma.operacao.count(),
+    ]);
+
+    return { operacoes: operacoes || [], total };
   } catch (error) {
     return null;
   }

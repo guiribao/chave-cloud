@@ -1,13 +1,11 @@
 import { mailClient } from '~/mailer.server';
 import { logEmailSentOnDb } from '../Logger/log-email-sent-on-db';
 
-const APP_URL = process.env.APP_URL;
-
 export default async function enviarEmailCadastroPerfil(
   email: string,
   nome: string
-): Promise<Boolean | null | undefined> {
-  var options = {
+): Promise<boolean | null> {
+  const options = {
     from: 'igrejachavedesaopedro@gmail.com',
     to: email,
     subject: 'Seja Bem-vindo (a) ao CHAVE de São Pedro',
@@ -41,24 +39,19 @@ export default async function enviarEmailCadastroPerfil(
   };
 
   try {
-    //@ts-ignore
-    mailClient.sendMail(options, function (error, info) {
-      if (error) {
-        console.log(error);
-        return false;
-      } else {
-        console.log(
-          `${new Date().toLocaleString()}:: CONTEXTO: bem-vindo | E-MAIL: ${email} | SMTP: ${
-            info.response
-          }`
-        );
+    const info = await mailClient.sendMail(options);
 
-        logEmailSentOnDb({ destinatario: email, contexto: 'bem-vindo'})
+    console.log(
+      `${new Date().toLocaleString()}:: CONTEXTO: bem-vindo | E-MAIL: ${email} | SMTP: ${
+        info.response
+      }`
+    );
 
-        return true;
-      }
-    });
+    await logEmailSentOnDb({ destinatario: email, contexto: 'bem-vindo' });
+
+    return true;
   } catch (error) {
+    console.log(error);
     return null;
   }
 }
