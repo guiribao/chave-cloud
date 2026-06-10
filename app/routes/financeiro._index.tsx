@@ -280,8 +280,15 @@ export default function FinanceiroIndex() {
       return null;
     }
 
+    const dataExtracao = new Date();
+    const dataExtracaoTitulo = format(dataExtracao, 'yyyyMMdd_HHmmss');
+    const dataExtracaoLabel = format(dataExtracao, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    const tipoRelatorio = 'Relatorio financeiro geral';
+
     const dataResumo = [
       ['Indicador', 'Valor'],
+      ['Tipo do relatorio', tipoRelatorio],
+      ['Data da extracao', dataExtracaoLabel],
       ['Total filtrado', paginacaoGeral.total],
       ['Pagina atual', filtro === 'tudo-filtro' ? `Todas (${operacoes.length} registros)` : paginacaoGeral.pagina],
       ['Itens exportados', operacoes.length],
@@ -318,8 +325,8 @@ export default function FinanceiroIndex() {
     ];
 
     return {
-      nome: 'financeiro_geral',
-      tipo: 'Relatorio financeiro geral',
+      nome: `financeiro_geral_${dataExtracaoTitulo}`,
+      tipo: `${tipoRelatorio} - ${dataExtracaoLabel}`,
       formato: 'xlsx' as const,
       abas: [
         { nome: 'Resumo', data: dataResumo },
@@ -336,12 +343,19 @@ export default function FinanceiroIndex() {
       return null;
     }
 
+    const dataExtracao = new Date();
+    const dataExtracaoTitulo = format(dataExtracao, 'yyyyMMdd_HHmmss');
+    const dataExtracaoLabel = format(dataExtracao, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    const tipoRelatorio = 'Relatorio financeiro de feira';
+
     const feiraSelecionada = feiras.find(
       (feira: FeiraOption) => String(feira.id) === filtros.feiraId
     );
 
     const dataResumo = [
       ['Indicador', 'Valor'],
+      ['Tipo do relatorio', tipoRelatorio],
+      ['Data da extracao', dataExtracaoLabel],
       ['Feira selecionada', feiraSelecionada?.titulo ?? filtros.feiraId],
       ['Total filtrado', paginacaoFeira.total],
       ['Pagina atual', filtro === 'tudo-filtro' ? `Todas (${feirantes.length} registros)` : paginacaoFeira.pagina],
@@ -353,8 +367,8 @@ export default function FinanceiroIndex() {
     ];
 
     let reqBody = {
-      nome: 'financeiro_feira',
-      tipo: 'Relatorio financeiro detalhado',
+      nome: `financeiro_feira_${dataExtracaoTitulo}`,
+      tipo: `${tipoRelatorio} - ${dataExtracaoLabel}`,
       formato: 'xlsx' as const,
       aba: 'Resumo',
       data: dataResumo,
