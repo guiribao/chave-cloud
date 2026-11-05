@@ -1,11 +1,13 @@
 import { prisma } from '~/secure/db.server';
 import { Operacao } from '@prisma/client';
+import { EXPORTACAO_MAX_REGISTROS } from '~/shared/Exportacao.util';
 
 type PegarOperacoesArgs = {
   pagina?: number;
   porPagina?: number;
   ordenarPor?: 'id' | 'valor' | 'tipo' | 'finalidade' | 'criado_em';
   direcao?: 'asc' | 'desc';
+  todos?: boolean; // exportação: ignora a paginação (até EXPORTACAO_MAX_REGISTROS)
 };
 
 export default async function pegarOperacoes({
@@ -13,6 +15,7 @@ export default async function pegarOperacoes({
   porPagina = 20,
   ordenarPor = 'criado_em',
   direcao = 'desc',
+  todos = false,
 }: PegarOperacoesArgs = {}): Promise<{ operacoes: Operacao[]; total: number } | null> {
   try {
     const paginaAjustada = Math.max(1, pagina);
@@ -27,8 +30,8 @@ export default async function pegarOperacoes({
           evento: true,
         },
         orderBy: { [ordenarPor]: direcao },
-        skip: (paginaAjustada - 1) * porPaginaAjustada,
-        take: porPaginaAjustada,
+        skip: todos ? 0 : (paginaAjustada - 1) * porPaginaAjustada,
+        take: todos ? EXPORTACAO_MAX_REGISTROS : porPaginaAjustada,
       }),
       prisma.operacao.count(),
     ]);

@@ -1,5 +1,6 @@
 import { prisma } from '~/secure/db.server';
 import { parseMonetaryNumber } from '~/shared/Number.util';
+import { EXPORTACAO_MAX_REGISTROS } from '~/shared/Exportacao.util';
 
 type PegarFeirantesArgs = {
   feiraId: string;
@@ -9,6 +10,7 @@ type PegarFeirantesArgs = {
   porPagina?: number;
   ordenarPor?: 'id' | 'nome' | 'nome_banca' | 'caixa_aberto';
   direcao?: 'asc' | 'desc';
+  todos?: boolean; // exportação: ignora a paginação (até EXPORTACAO_MAX_REGISTROS)
 };
 
 export default async function pegarFeirantesPorFeira({
@@ -19,6 +21,7 @@ export default async function pegarFeirantesPorFeira({
   porPagina = 20,
   ordenarPor = 'id',
   direcao = 'desc',
+  todos = false,
 }: PegarFeirantesArgs): Promise<{ feirantes: any[]; total: number } | null> {
   try {
     const where: any = {
@@ -67,8 +70,8 @@ export default async function pegarFeirantesPorFeira({
                 },
               }
             : { [ordenarPor]: direcao },
-        skip: (paginaAjustada - 1) * porPaginaAjustada,
-        take: porPaginaAjustada,
+        skip: todos ? 0 : (paginaAjustada - 1) * porPaginaAjustada,
+        take: todos ? EXPORTACAO_MAX_REGISTROS : porPaginaAjustada,
       }),
       prisma.evento_Feirante.count({ where }),
     ]);

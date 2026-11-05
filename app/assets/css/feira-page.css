@@ -86,6 +86,20 @@ main {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.card-banca-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-banca-link:focus-visible {
+  outline: 3px solid var(--main-color);
+  outline-offset: -3px;
+  border-radius: 16px;
+}
+
 .card-banca:hover {
   transform: translateY(-4px);
   box-shadow: 0 14px 28px -14px rgba(16, 24, 40, 0.4);

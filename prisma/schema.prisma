@@ -85,6 +85,7 @@ model Perfil {
   Ref_operacao          Operacao[]        @relation("Ref_operacao")
   Operacao              Operacao[]        @relation("Operacao")
   Evento_Feirante       Evento_Feirante[]
+  Curtidas_Anuncio      Anuncio_Curtida[]
   nome_banca            String?           @db.VarChar(200)
   logo_banca            String?           @db.VarChar(200)
 }
@@ -173,8 +174,23 @@ model Anuncio_Feira {
   mensagem         String          @db.VarChar(140)
   criado_em        DateTime        @default(now()) @db.Timestamptz()
 
+  curtidas Anuncio_Curtida[]
+
   @@index([eventoId, criado_em])
   @@index([eventoFeiranteId, criado_em])
+}
+
+// Curtidas nos anúncios das bancas (1 por perfil por anúncio)
+model Anuncio_Curtida {
+  id        Int           @id @default(autoincrement())
+  anuncio   Anuncio_Feira @relation(fields: [anuncioId], references: [id], onDelete: Cascade)
+  anuncioId Int
+  perfil    Perfil        @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  perfilId  Int
+  criado_em DateTime      @default(now()) @db.Timestamptz()
+
+  @@unique([anuncioId, perfilId])
+  @@index([perfilId])
 }
 
 enum FormaPagamento {

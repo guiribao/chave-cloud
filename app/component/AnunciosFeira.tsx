@@ -1,4 +1,4 @@
-import { useFetcher } from '@remix-run/react';
+import { Link, useFetcher } from '@remix-run/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -8,6 +8,7 @@ type Anuncio = {
   mensagem: string;
   criadoEm: string;
   eventoId: number;
+  eventoFeiranteId: number;
   eventoTitulo: string;
   banca: string;
   logo: string | null;
@@ -121,7 +122,11 @@ export default function AnunciosFeira({ eventoId, mostrarFeira = false }: Anunci
           )}
         </div>
 
-        <div className='anuncio-feira-conteudo'>
+        <Link
+          className='anuncio-feira-conteudo'
+          to={`/calendario/feira/${atual.eventoId}/banca/${atual.eventoFeiranteId}`}
+          title='Ver anúncios da banca'
+        >
           <div className='anuncio-feira-topo'>
             <strong title={atual.banca}>{atual.banca}</strong>
             <small>
@@ -130,7 +135,7 @@ export default function AnunciosFeira({ eventoId, mostrarFeira = false }: Anunci
           </div>
           <p>{atual.mensagem}</p>
           {mostrarFeira && <small className='anuncio-feira-evento'>{atual.eventoTitulo}</small>}
-        </div>
+        </Link>
 
         <button
           type='button'

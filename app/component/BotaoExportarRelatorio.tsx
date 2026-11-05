@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { EXPORTACAO_MAX_REGISTROS } from '~/shared/Exportacao.util';
 
 export type FiltroExportacao = 'pagina-atual' | 'tudo-filtro';
 
@@ -147,14 +148,16 @@ export default function BotaoExportarRelatorio({
   }, [dropdownAberto]);
 
   async function exportar(filtro?: FiltroExportacao) {
-    const payload = await Promise.resolve(gerarPayload(filtro));
+    if (isExportando) return;
 
-    if (!payload) return;
-
+    // Liga o estado antes de gerar o payload: "Tudo com filtro" busca dados no servidor
     setIsExportando(true);
     setDropdownAberto(false);
 
     try {
+      const payload = await Promise.resolve(gerarPayload(filtro));
+      if (!payload) return;
+
       const response = await fetch('/relatorio/gerar', {
         method: 'POST',
         headers: {
@@ -176,7 +179,8 @@ export default function BotaoExportarRelatorio({
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      URL.revokeObjectURL(url);
+      // Revoga depois do clique ser processado (alguns navegadores cancelam o download)
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       alert('Erro ao gerar relatorio. Tente novamente.');
     } finally {
@@ -265,7 +269,7 @@ export default function BotaoExportarRelatorio({
             <span style={{ marginRight: '8px', fontSize: '16px' }}>📊</span>
             Tudo com filtro
             <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-              Sem limite de páginas
+              Todas as páginas (até {EXPORTACAO_MAX_REGISTROS.toLocaleString('pt-BR')} registros)
             </div>
           </button>
         </div>

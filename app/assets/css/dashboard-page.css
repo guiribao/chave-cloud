@@ -1,0 +1,443 @@
+.dash {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25em;
+}
+
+/* ---------- Boas-vindas ---------- */
+.dash-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1em;
+  padding: 1.6em 1.6em 1.4em;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--main-color) 0%, #1e3a8a 100%);
+  color: #fff;
+  box-shadow: 0 18px 36px -22px rgba(30, 58, 138, 0.85);
+}
+
+.dash-hero h1 {
+  margin: 0.15em 0;
+  font-size: clamp(1.4rem, 1.1rem + 1.4vw, 2.1rem);
+  line-height: 1.2;
+}
+
+.dash-hero-data {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  text-transform: capitalize;
+}
+
+.dash-hero-resumo {
+  margin: 0;
+  opacity: 0.92;
+}
+
+.dash-hero-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+}
+
+.dash-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.6em 1.1em;
+  border-radius: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dash-botao-claro {
+  background: #fff;
+  color: var(--main-color);
+}
+
+.dash-botao-contorno {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+.dash-botao-contorno:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- Grade ---------- */
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1.25em;
+  align-items: start;
+}
+
+.dash-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25em;
+  min-width: 0;
+}
+
+.dash-bloco {
+  padding: 1.1em 1.2em;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 16px;
+  background: var(--surface-1, #fff);
+  box-shadow: var(--shadow-soft);
+}
+
+.dash-bloco > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8em;
+}
+
+.dash-bloco h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.dash-bloco > header a {
+  color: var(--main-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.dash-contador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 99px;
+  background: #b42318;
+  color: #fff;
+  font-size: 0.72rem;
+}
+
+.dash ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash-vazio {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.9em;
+  border: 1px dashed var(--border-soft);
+  border-radius: 12px;
+  color: var(--text-gray);
+}
+
+.dash-vazio > span {
+  font-size: 1.8em;
+  color: var(--main-color);
+}
+
+.dash-vazio p {
+  margin: 0;
+}
+
+.dash-vazio a {
+  color: var(--main-color);
+  font-weight: 600;
+}
+
+/* Cores por tipo de evento */
+.dash .tipo-evento { --cor-tipo: var(--main-color); --fundo-tipo: #eff4ff; }
+.dash .tipo-feira { --cor-tipo: #f79009; --fundo-tipo: #fffaeb; }
+.dash .tipo-trabalho { --cor-tipo: #7a5af8; --fundo-tipo: #f4f3ff; }
+.dash .tipo-treinamento { --cor-tipo: #12b76a; --fundo-tipo: #ecfdf3; }
+
+/* ---------- Hoje ---------- */
+.dash-eventos-hoje a,
+.dash-proximos a {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  padding: 0.7em 0.8em;
+  border-radius: 12px;
+  color: var(--color-dark);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.dash-eventos-hoje a {
+  border-left: 4px solid var(--cor-tipo);
+  background: var(--fundo-tipo);
+}
+
+.dash-eventos-hoje a:hover,
+.dash-proximos a:hover {
+  filter: brightness(0.98);
+  background: #f9fafb;
+}
+
+.dash-eventos-hoje a:hover {
+  background: var(--fundo-tipo);
+}
+
+.dash-hora {
+  flex-shrink: 0;
+  min-width: 3.2em;
+  color: var(--cor-tipo);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.dash-evento-texto {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+}
+
+.dash-evento-texto strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dash-evento-texto small {
+  color: var(--text-gray);
+  font-size: 0.78rem;
+}
+
+.dash-eventos-hoje .dash-evento-texto small {
+  color: var(--cor-tipo);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dash-descricao {
+  color: var(--text-gray);
+  font-size: 0.82rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dash-seta {
+  color: var(--text-gray);
+  font-size: 1.2em;
+}
+
+/* ---------- Próximos ---------- */
+.dash-data {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 48px;
+  padding: 0.3em 0;
+  border-radius: 10px;
+  background: var(--fundo-tipo);
+  color: var(--cor-tipo);
+  line-height: 1.1;
+}
+
+.dash-data small {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dash-data strong {
+  font-size: 1.25rem;
+}
+
+.dash-proximos .dash-evento-texto small::first-letter {
+  text-transform: uppercase;
+}
+
+.dash-quando {
+  flex-shrink: 0;
+  padding: 0.15em 0.55em;
+  border-radius: 99px;
+  background: #eff4ff;
+  color: var(--main-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ---------- Notificações ---------- */
+.dash-notificacoes a,
+.dash-notificacoes li > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7em;
+  padding: 0.7em 0.8em;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: var(--color-dark);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.dash-notificacoes a:hover {
+  background: #f2f4f7;
+}
+
+.dash-notificacao-icone {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: #eff4ff;
+  color: var(--main-color);
+  font-size: 1.1rem;
+}
+
+.dash-notificacoes .nivel-destaque a,
+.dash-notificacoes .nivel-destaque > div {
+  background: #eff4ff;
+}
+
+.dash-notificacoes .nivel-destaque .dash-notificacao-icone {
+  background: var(--main-color);
+  color: #fff;
+}
+
+.dash-notificacoes .nivel-alerta a,
+.dash-notificacoes .nivel-alerta > div {
+  background: #fef3f2;
+}
+
+.dash-notificacoes .nivel-alerta .dash-notificacao-icone {
+  background: #b42318;
+  color: #fff;
+}
+
+/* ---------- Minhas feiras ---------- */
+.dash-feiras li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+  padding: 0.9em;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 14px;
+}
+
+.dash-feiras li.hoje {
+  border-color: #f79009;
+  background: #fffaeb;
+}
+
+.dash-feira-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5em;
+}
+
+.dash-feira-topo div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dash-feira-topo small {
+  color: var(--text-gray);
+  font-size: 0.8rem;
+}
+
+.dash-feira-numeros {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0.5em;
+}
+
+.dash-feira-numeros span {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5em 0.6em;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(16, 24, 40, 0.06);
+}
+
+.dash-feira-numeros strong {
+  font-size: 0.98rem;
+}
+
+.dash-feira-numeros small {
+  color: var(--text-gray);
+  font-size: 0.72rem;
+}
+
+.dash-feira-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.dash-feira-acoes a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.4em 0.75em;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--color-dark);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.dash-feira-acoes a:first-child {
+  border-color: var(--main-color);
+  background: var(--main-color);
+  color: #fff;
+}
+
+/* ---------- Anúncios ---------- */
+.dash-anuncios a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  padding: 0.7em 0.8em;
+  border-left: 4px solid var(--main-color);
+  border-radius: 10px;
+  background: #f9fafb;
+  color: var(--color-dark);
+  text-decoration: none;
+}
+
+.dash-anuncios a:hover {
+  background: #f2f4f7;
+}
+
+.dash-anuncios p {
+  margin: 0;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.dash-anuncios small {
+  color: var(--text-gray);
+  font-size: 0.75rem;
+}
+
+@media screen and (max-width: 960px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+}

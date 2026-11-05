@@ -15,7 +15,11 @@ import DeletingModal from '~/component/DeletingModal';
 import { useState } from 'react';
 import deletarPerfilPorId from '~/domain/Perfil/deletar-perfil-por-id.server';
 import FiltroListagem from '~/component/FiltroListagem';
+import OrdenacaoListagem from '~/component/OrdenacaoListagem';
 import BotaoExportarRelatorio, { type FiltroExportacao } from '~/component/BotaoExportarRelatorio';
+import { EXPORTACAO_MAX_REGISTROS, buscarDadosSemPaginacao } from '~/shared/Exportacao.util';
+import { authenticator } from '~/secure/authentication.server';
+import { Papel } from '@prisma/client';
 import Minicards from '~/component/Minicards';
 
 type PerfilResumo = {
@@ -140,7 +144,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
     'criado_em';
   const direcao = (url.searchParams.get('direcao') as 'asc' | 'desc') ?? 'desc';
 
+  // Somente ADMIN. A checagem precisa estar aqui: requisições de dados (?_data=)
+  // executam só este loader, sem passar pela autorização do root.
+  const usuario = await authenticator.isAuthenticated(request);
+  if (usuario?.papel !== Papel.ADMIN) throw new Response('Permissão negada.', { status: 403 });
+
+  // Exportação "Tudo com filtro": mesmos filtros, sem paginação
+  const exportarTudo = url.searchParams.get('exportar') === 'tudo';
+
   const resultado = await pegarPerfis({
+    todos: exportarTudo,
     nome,
     grupo,
     membro,
@@ -211,37 +224,15 @@ export default function GenteIndex() {
     let total = paginacao.total;
     let pagina = paginacao.pagina;
 
-    // Se for exportar tudo, fazer fetch com paginação grande
+    // "Tudo com filtro": busca todos os registros com os filtros atuais, sem paginação
     if (filtro === 'tudo-filtro') {
       try {
-        const urlParams = new URLSearchParams({
-          nome: filtros.nome,
-          grupo: filtros.grupo,
-          membro: filtros.membro,
-          criadoDe: filtros.criadoDe,
-          criadoAte: filtros.criadoAte,
-          pagina: '1',
-          porPagina: '10000',
-          ordenarPor: ordenacao.ordenarPor,
-          direcao: ordenacao.direcao,
-        });
-
-        const response = await fetch(`/gente?${urlParams.toString()}`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const html = await response.text();
-          // Extrair os dados do HTML (isso é um pouco hacky, mas funciona)
-          // Na verdade, vamos apenas usar os dados que temos em memória
-          // e informar ao usuário se há muito volume
-        }
+        const resultado = await buscarDadosSemPaginacao<GenteLoaderData>('routes/gente._index', 'tudo');
+        dados = resultado.perfis;
+        total = resultado.paginacao.total;
       } catch (error) {
-        console.error('Erro ao buscar todos os dados:', error);
-        // Continua com dados da página atual
+        alert('Não foi possível buscar todos os registros para exportação. Tente novamente.');
+        return null;
       }
     }
 
@@ -376,10 +367,13 @@ export default function GenteIndex() {
       ['Cadastro de', filtros.criadoDe || '-'],
       ['Cadastro ate', filtros.criadoAte || '-'],
       ['Modo exportacao', filtro === 'tudo-filtro' ? 'Tudo que corresponde ao filtro' : 'Só página atual'],
+      ...(total > dados.length
+        ? [['Atenção', `Exportados ${dados.length} de ${total} registros (limite de ${EXPORTACAO_MAX_REGISTROS})`]]
+        : []),
     ];
 
     return {
-      nome: `gente_perfis_${dataExtracaoTitulo}`,
+      nome: `gente_perfis_${filtro === 'tudo-filtro' ? 'tudo' : `pagina${pagina}`}_${dataExtracaoTitulo}`,
       tipo: `${tipoRelatorio} - ${dataExtracaoLabel}`,
       formato: 'xlsx' as const,
       abas: [
@@ -463,12 +457,12 @@ export default function GenteIndex() {
           </div>
 
           <FiltroListagem
-            clearPath='/gente'
             values={filtros}
             fields={[
               { name: 'nome', label: 'Nome', type: 'text', placeholder: 'Nome ou sobrenome' },
               {
                 name: 'grupo',
+                emptyValue: 'TODOS',
                 label: 'Grupo',
                 type: 'select',
                 options: [
@@ -489,37 +483,19 @@ export default function GenteIndex() {
               },
               { name: 'criadoDe', label: 'Cadastro de', type: 'date' },
               { name: 'criadoAte', label: 'Cadastro ate', type: 'date' },
-              {
-                name: 'ordenarPor',
-                label: 'Ordenar por',
-                type: 'select',
-                options: [
-                  { value: 'criado_em', label: 'Criado em' },
-                  { value: 'nome', label: 'Nome' },
-                  { value: 'grupo', label: 'Grupo' },
-                  { value: 'membro', label: 'Membro' },
-                  { value: 'id', label: 'ID' },
-                ],
-              },
-              {
-                name: 'direcao',
-                label: 'Direcao',
-                type: 'select',
-                options: [
-                  { value: 'desc', label: 'Decrescente' },
-                  { value: 'asc', label: 'Crescente' },
-                ],
-              },
-              {
-                name: 'porPagina',
-                label: 'Itens por pagina',
-                type: 'select',
-                options: [
-                  { value: '10', label: '10' },
-                  { value: '20', label: '20' },
-                  { value: '50', label: '50' },
-                ],
-              },
+            ]}
+          />
+
+          <OrdenacaoListagem
+            ordenarPor={ordenacao.ordenarPor}
+            direcao={ordenacao.direcao}
+            porPagina={paginacao.porPagina}
+            opcoes={[
+              { value: 'criado_em', label: 'Criado em' },
+              { value: 'nome', label: 'Nome' },
+              { value: 'grupo', label: 'Grupo' },
+              { value: 'membro', label: 'Membro' },
+              { value: 'id', label: 'ID' },
             ]}
           />
 

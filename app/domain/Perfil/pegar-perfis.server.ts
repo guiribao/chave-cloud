@@ -1,4 +1,5 @@
 import { prisma } from '~/secure/db.server';
+import { EXPORTACAO_MAX_REGISTROS } from '~/shared/Exportacao.util';
 
 type PerfilFilter = {
   nome?: string;
@@ -10,6 +11,7 @@ type PerfilFilter = {
   porPagina?: number;
   ordenarPor?: 'id' | 'nome' | 'grupo' | 'membro' | 'criado_em';
   direcao?: 'asc' | 'desc';
+  todos?: boolean; // exportação: ignora a paginação (até EXPORTACAO_MAX_REGISTROS)
 };
 
 type PerfilListagem = {
@@ -68,8 +70,8 @@ export default async function pegarPerfis(filters: PerfilFilter = {}): Promise<P
           ordenarPor === 'nome'
             ? [{ nome: direcao }, { sobrenome: direcao }]
             : [{ [ordenarPor]: direcao }],
-        skip: (pagina - 1) * porPagina,
-        take: porPagina,
+        skip: filters.todos ? 0 : (pagina - 1) * porPagina,
+        take: filters.todos ? EXPORTACAO_MAX_REGISTROS : porPagina,
       }),
       prisma.perfil.count({ where }),
     ]);

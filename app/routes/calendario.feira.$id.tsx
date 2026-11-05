@@ -369,7 +369,8 @@ export default function FeiraIndex() {
     setConsultando(abrirVenda ? false : consultando);
     setVendendo(abrirVenda);
     // Em caso de erro no envio, mantém o formulário de configuração aberto
-    setConfigurando(!isSubmitting && actionData?.abrir === 'config');
+    // ?config (ex.: link do início) abre a configuração da banca
+    setConfigurando(!isSubmitting && !abrirVenda && (params.has('config') || actionData?.abrir === 'config'));
     setPreviewLogo(null);
   }, [isSubmitting, params, actionData]);
 
@@ -827,6 +828,7 @@ export default function FeiraIndex() {
                     {feira.Feirantes.map((feirante) => (
                       <CardBanca
                         key={feirante.id}
+                        feiraId={feira.id}
                         feirante={feirante}
                         minhaBanca={feirante.id === feira.eventoFeirante?.id}
                       />
@@ -853,7 +855,7 @@ function iniciais(nome: string) {
     .toUpperCase();
 }
 
-function CardBanca({ feirante, minhaBanca }) {
+function CardBanca({ feiraId, feirante, minhaBanca }) {
   let [semLogo, setSemLogo] = useState(!feirante.perfil?.logo_banca);
 
   let nomeFeirante = `${feirante.perfil.nome} ${feirante.perfil.sobrenome}`.trim();
@@ -862,6 +864,7 @@ function CardBanca({ feirante, minhaBanca }) {
 
   return (
     <li className={`card-banca${minhaBanca ? ' minha-banca' : ''}`} title={nomeExibido}>
+      <Link to={`/calendario/feira/${feiraId}/banca/${feirante.id}`} className='card-banca-link'>
       <div className='card-banca-toldo' aria-hidden='true' />
 
       <div className='card-banca-vitrine'>
@@ -884,6 +887,7 @@ function CardBanca({ feirante, minhaBanca }) {
         <p className='card-banca-nome'>{nomeExibido}</p>
         {nomeBanca && <p className='card-banca-dono'>por {nomeFeirante}</p>}
       </div>
+      </Link>
     </li>
   );
 }

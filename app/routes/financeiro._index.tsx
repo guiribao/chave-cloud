@@ -4,6 +4,9 @@ import { Link, useLoaderData } from '@remix-run/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BotaoExportarRelatorio, { type FiltroExportacao } from '~/component/BotaoExportarRelatorio';
+import { EXPORTACAO_MAX_REGISTROS, buscarDadosSemPaginacao } from '~/shared/Exportacao.util';
+import { authenticator } from '~/secure/authentication.server';
+import { Papel } from '@prisma/client';
 import pegarEventosFeiras from '~/domain/Calendario/pegar-eventos-feiras.server';
 import pegarFeirantesPorFeira from '~/domain/Calendario/pegar-feirantes-por-feiras.server';
 import pegarOperacoes from '~/domain/Financeiro/pegar-operacoes.server';
@@ -11,6 +14,7 @@ import { calcularCaixaFeirante, formatarColunaDeValor } from '~/shared/Feira.uti
 import { gerarDescricaoOperacaoFeira } from '~/shared/Operacao.util';
 import { parseMonetaryNumber } from '~/shared/Number.util';
 import FiltroListagem from '~/component/FiltroListagem';
+import OrdenacaoListagem from '~/component/OrdenacaoListagem';
 import Minicards from '~/component/Minicards';
 
 type FeiraOption = {
@@ -157,7 +161,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
     'id';
   const direcaoFeira = (url.searchParams.get('direcaoFeira') as 'asc' | 'desc') ?? 'desc';
 
+  // Somente ADMIN. A checagem precisa estar aqui: requisições de dados (?_data=)
+  // executam só este loader, sem passar pela autorização do root.
+  const usuario = await authenticator.isAuthenticated(request);
+  if (usuario?.papel !== Papel.ADMIN) throw new Response('Permissão negada.', { status: 403 });
+
+  // Exportação "Tudo com filtro": mesmos filtros, sem paginação
+  const exportar = url.searchParams.get('exportar'); // 'geral' | 'feira' | null
+
   const resultadoOperacoes = await pegarOperacoes({
+    todos: exportar === 'geral',
     pagina: paginaGeral,
     porPagina: porPaginaGeral,
     ordenarPor: ordenarPorGeral,
@@ -174,6 +187,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   if (feiraId !== '0') {
     const resultadoFeirantes = await pegarFeirantesPorFeira({
+      todos: exportar === 'feira',
       feiraId,
       nome,
       statusCaixa,
@@ -274,11 +288,32 @@ export default function FinanceiroIndex() {
     },
   ];
 
-  function gerarPayloadRelatorioGeral(filtro?: FiltroExportacao) {
-    if (!operacoes.length) {
+  async function gerarPayloadRelatorioGeral(filtro?: FiltroExportacao) {
+    const exportarTudo = filtro === 'tudo-filtro';
+    let dados = operacoes;
+    let total = paginacaoGeral.total;
+
+    // "Tudo com filtro": busca todas as operações com a ordenação atual, sem paginação
+    if (exportarTudo) {
+      try {
+        const resultado = await buscarDadosSemPaginacao<FinanceiroLoaderData>('routes/financeiro._index', 'geral');
+        dados = resultado.operacoes;
+        total = resultado.paginacaoGeral.total;
+      } catch (error) {
+        alert('Não foi possível buscar todos os registros para exportação. Tente novamente.');
+        return null;
+      }
+    }
+
+    if (!dados.length) {
       alert('Nao ha dados para exportar');
       return null;
     }
+
+    const totalEntradas = dados.filter((operacao) => operacao.tipo === 'ENTRADA').length;
+    const totalSaidas = dados.filter((operacao) => operacao.tipo === 'SAIDA').length;
+    const totalValor = dados.reduce((soma, operacao) => soma + parseMonetaryNumber(operacao.valor), 0);
+    const escopo = exportarTudo ? 'exportadas' : 'na pagina';
 
     const dataExtracao = new Date();
     const dataExtracaoTitulo = format(dataExtracao, 'yyyyMMdd_HHmmss');
@@ -289,22 +324,25 @@ export default function FinanceiroIndex() {
       ['Indicador', 'Valor'],
       ['Tipo do relatorio', tipoRelatorio],
       ['Data da extracao', dataExtracaoLabel],
-      ['Total filtrado', paginacaoGeral.total],
-      ['Pagina atual', filtro === 'tudo-filtro' ? `Todas (${operacoes.length} registros)` : paginacaoGeral.pagina],
-      ['Itens exportados', operacoes.length],
+      ['Total filtrado', total],
+      ['Pagina atual', exportarTudo ? `Todas (${dados.length} registros)` : paginacaoGeral.pagina],
+      ['Itens exportados', dados.length],
       ['Ordenacao', `${filtros.ordenarPorGeral} (${filtros.direcaoGeral})`],
-      ['Entradas na pagina', totalEntradasPagina],
-      ['Saidas na pagina', totalSaidasPagina],
+      [`Entradas ${escopo}`, totalEntradas],
+      [`Saidas ${escopo}`, totalSaidas],
       [
-        'Valor total na pagina',
-        totalValorOperacoesPagina.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+        `Valor total ${escopo}`,
+        totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
       ],
-      ['Modo exportacao', filtro === 'tudo-filtro' ? 'Tudo que corresponde ao filtro' : 'Só página atual'],
+      ['Modo exportacao', exportarTudo ? 'Tudo que corresponde ao filtro' : 'Só página atual'],
+      ...(total > dados.length
+        ? [['Atenção', `Exportados ${dados.length} de ${total} registros (limite de ${EXPORTACAO_MAX_REGISTROS})`]]
+        : []),
     ];
 
     const dataOperacoes = [
       ['ID', 'Descricao', 'Tipo', 'Finalidade', 'Valor', 'Criado em'],
-      ...operacoes.map((operacao) => {
+      ...dados.map((operacao) => {
         const descricao =
           operacao.finalidade === 'FEIRA'
             ? gerarDescricaoOperacaoFeira(operacao)
@@ -325,7 +363,7 @@ export default function FinanceiroIndex() {
     ];
 
     return {
-      nome: `financeiro_geral_${dataExtracaoTitulo}`,
+      nome: `financeiro_geral_${exportarTudo ? 'tudo' : `pagina${paginacaoGeral.pagina}`}_${dataExtracaoTitulo}`,
       tipo: `${tipoRelatorio} - ${dataExtracaoLabel}`,
       formato: 'xlsx' as const,
       abas: [
@@ -337,8 +375,24 @@ export default function FinanceiroIndex() {
     };
   }
 
-  function gerarPayloadRelatorioFeira(filtro?: FiltroExportacao) {
-    if (!feirantes.length) {
+  async function gerarPayloadRelatorioFeira(filtro?: FiltroExportacao) {
+    const exportarTudo = filtro === 'tudo-filtro';
+    let dadosFeirantes = feirantes;
+    let total = paginacaoFeira.total;
+
+    // "Tudo com filtro": busca todos os feirantes da feira com os filtros atuais, sem paginação
+    if (exportarTudo) {
+      try {
+        const resultado = await buscarDadosSemPaginacao<FinanceiroLoaderData>('routes/financeiro._index', 'feira');
+        dadosFeirantes = resultado.feirantes;
+        total = resultado.paginacaoFeira.total;
+      } catch (error) {
+        alert('Não foi possível buscar todos os registros para exportação. Tente novamente.');
+        return null;
+      }
+    }
+
+    if (!dadosFeirantes.length) {
       alert('Nao ha dados para exportar');
       return null;
     }
@@ -357,17 +411,20 @@ export default function FinanceiroIndex() {
       ['Tipo do relatorio', tipoRelatorio],
       ['Data da extracao', dataExtracaoLabel],
       ['Feira selecionada', feiraSelecionada?.titulo ?? filtros.feiraId],
-      ['Total filtrado', paginacaoFeira.total],
-      ['Pagina atual', filtro === 'tudo-filtro' ? `Todas (${feirantes.length} registros)` : paginacaoFeira.pagina],
-      ['Itens exportados', feirantes.length],
+      ['Total filtrado', total],
+      ['Pagina atual', exportarTudo ? `Todas (${dadosFeirantes.length} registros)` : paginacaoFeira.pagina],
+      ['Itens exportados', dadosFeirantes.length],
       ['Ordenacao', `${filtros.ordenarPorFeira} (${filtros.direcaoFeira})`],
       ['Filtro nome', filtros.nome || '-'],
       ['Filtro status caixa', filtros.statusCaixa || 'Todos'],
-      ['Modo exportacao', filtro === 'tudo-filtro' ? 'Tudo que corresponde ao filtro' : 'Só página atual'],
+      ['Modo exportacao', exportarTudo ? 'Tudo que corresponde ao filtro' : 'Só página atual'],
+      ...(total > dadosFeirantes.length
+        ? [['Atenção', `Exportados ${dadosFeirantes.length} de ${total} registros (limite de ${EXPORTACAO_MAX_REGISTROS})`]]
+        : []),
     ];
 
     let reqBody = {
-      nome: `financeiro_feira_${dataExtracaoTitulo}`,
+      nome: `financeiro_feira_${exportarTudo ? 'tudo' : `pagina${paginacaoFeira.pagina}`}_${dataExtracaoTitulo}`,
       tipo: `${tipoRelatorio} - ${dataExtracaoLabel}`,
       formato: 'xlsx' as const,
       aba: 'Resumo',
@@ -430,7 +487,7 @@ export default function FinanceiroIndex() {
 
     reqBody.abas[1].data.push(linhaTitulo);
 
-    for (let feirante of feirantes) {
+    for (let feirante of dadosFeirantes) {
       let caixa = calcularCaixaFeirante(feirante);
       const operacoes = feirante.Operacao.length ? feirante.Operacao : [null];
       const totalCreditoParcelado = feirante.Operacao.filter(
@@ -555,41 +612,22 @@ export default function FinanceiroIndex() {
             </div>
           </div>
 
-          <FiltroListagem
-            clearPath='/financeiro'
-            values={filtros}
-            fields={[
-              {
-                name: 'ordenarPorGeral',
-                label: 'Ordenar por',
-                type: 'select',
-                options: [
-                  { value: 'criado_em', label: 'Criado em' },
-                  { value: 'valor', label: 'Valor' },
-                  { value: 'tipo', label: 'Tipo' },
-                  { value: 'finalidade', label: 'Finalidade' },
-                  { value: 'id', label: 'ID' },
-                ],
-              },
-              {
-                name: 'direcaoGeral',
-                label: 'Direcao',
-                type: 'select',
-                options: [
-                  { value: 'desc', label: 'Decrescente' },
-                  { value: 'asc', label: 'Crescente' },
-                ],
-              },
-              {
-                name: 'porPaginaGeral',
-                label: 'Itens por pagina',
-                type: 'select',
-                options: [
-                  { value: '10', label: '10' },
-                  { value: '20', label: '20' },
-                  { value: '50', label: '50' },
-                ],
-              },
+          <OrdenacaoListagem
+            ordenarPor={filtros.ordenarPorGeral}
+            direcao={filtros.direcaoGeral}
+            porPagina={filtros.porPaginaGeral}
+            params={{
+              ordenarPor: 'ordenarPorGeral',
+              direcao: 'direcaoGeral',
+              porPagina: 'porPaginaGeral',
+              pagina: 'paginaGeral',
+            }}
+            opcoes={[
+              { value: 'criado_em', label: 'Criado em' },
+              { value: 'valor', label: 'Valor' },
+              { value: 'tipo', label: 'Tipo' },
+              { value: 'finalidade', label: 'Finalidade' },
+              { value: 'id', label: 'ID' },
             ]}
           />
 
@@ -715,11 +753,12 @@ export default function FinanceiroIndex() {
           </div>
 
           <FiltroListagem
-            clearPath='/financeiro'
+            pageParam='paginaFeira'
             values={filtros}
             fields={[
               {
                 name: 'feiraId',
+                emptyValue: '0',
                 label: 'Feira',
                 type: 'select',
                 options: [
@@ -746,36 +785,24 @@ export default function FinanceiroIndex() {
                   { value: 'FECHADO', label: 'Fechado' },
                 ],
               },
-              {
-                name: 'ordenarPorFeira',
-                label: 'Ordenar por',
-                type: 'select',
-                options: [
-                  { value: 'id', label: 'Cadastro no evento' },
-                  { value: 'nome', label: 'Responsavel' },
-                  { value: 'nome_banca', label: 'Banca' },
-                  { value: 'caixa_aberto', label: 'Caixa' },
-                ],
-              },
-              {
-                name: 'direcaoFeira',
-                label: 'Direcao',
-                type: 'select',
-                options: [
-                  { value: 'desc', label: 'Decrescente' },
-                  { value: 'asc', label: 'Crescente' },
-                ],
-              },
-              {
-                name: 'porPaginaFeira',
-                label: 'Itens por pagina',
-                type: 'select',
-                options: [
-                  { value: '10', label: '10' },
-                  { value: '20', label: '20' },
-                  { value: '50', label: '50' },
-                ],
-              },
+            ]}
+          />
+
+          <OrdenacaoListagem
+            ordenarPor={filtros.ordenarPorFeira}
+            direcao={filtros.direcaoFeira}
+            porPagina={filtros.porPaginaFeira}
+            params={{
+              ordenarPor: 'ordenarPorFeira',
+              direcao: 'direcaoFeira',
+              porPagina: 'porPaginaFeira',
+              pagina: 'paginaFeira',
+            }}
+            opcoes={[
+              { value: 'id', label: 'Cadastro no evento' },
+              { value: 'nome', label: 'Responsável' },
+              { value: 'nome_banca', label: 'Banca' },
+              { value: 'caixa_aberto', label: 'Caixa' },
             ]}
           />
 

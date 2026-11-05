@@ -1,7 +1,7 @@
 //@ts-nocheck
-import { FinalidadeOperacao } from '@prisma/client';
+import { FinalidadeOperacao, Papel } from '@prisma/client';
 import { json } from '@remix-run/node';
-import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
+import type { LinksFunction, LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { Link, useLoaderData } from '@remix-run/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,6 +12,12 @@ import pegarDadosOperacoesDashboard from '~/domain/Financeiro/pegar-dados-operac
 import pegarDadosPerfisDashboard from '~/domain/Perfil/pegar-dados-perfis-dashboard.server';
 import { authenticator } from '~/secure/authentication.server';
 import { gerarDescricaoOperacaoFeira } from '~/shared/Operacao.util';
+import dashboardPageStyle from '~/assets/css/dashboard-page.css';
+import pegarPerfilPeloIdUsuario from '~/domain/Perfil/perfil-pelo-id-usuario.server';
+import pegarDashboardUsuario from '~/domain/Dashboard/pegar-dashboard-usuario.server';
+import DashboardUsuario from '~/component/DashboardUsuario';
+
+export const links: LinksFunction = () => [{ rel: 'stylesheet', href: dashboardPageStyle }];
 
 export const meta: MetaFunction = () => {
   return [
@@ -33,6 +39,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
     failureRedirect: '/autentica/entrar',
   });
 
+  // Usuário comum: início focado em eventos, feiras e notificações.
+  // Dados administrativos (operações e perfis) só são carregados para ADMIN.
+  if (usuario.papel !== Papel.ADMIN) {
+    let perfil = await pegarPerfilPeloIdUsuario(usuario.id);
+    let dashboard = perfil ? await pegarDashboardUsuario(perfil) : null;
+    return json({ admin: false, nome: perfil?.nome ?? '', dashboard });
+  }
+
   // - Get operacoes data
   let { ultimasDezOperacoes, qtdOperacoes } = await pegarDadosOperacoesDashboard();
   // - Get perfis data
@@ -40,10 +54,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // - Get eventos data
   let eventos = await pegarDadosEventosDashboard();
 
-  return json({ ultimasDezOperacoes, qtdOperacoes, ultimosDezPerfis, qtdPerfis, eventos });
+  return json({ admin: true, ultimasDezOperacoes, qtdOperacoes, ultimosDezPerfis, qtdPerfis, eventos });
 }
 
 export default function DashboardIndex() {
+  let data = useLoaderData();
+
+  if (!data.admin) return <DashboardUsuario nome={data.nome} dashboard={data.dashboard} />;
+
+  return <DashboardAdmin />;
+}
+
+function DashboardAdmin() {
   let { eventos, ultimasDezOperacoes, qtdOperacoes, ultimosDezPerfis, qtdPerfis } = useLoaderData();
 
   let qtdPerfilFardado = qtdPerfis.find((e) => e.grupo == 'FARDADO');

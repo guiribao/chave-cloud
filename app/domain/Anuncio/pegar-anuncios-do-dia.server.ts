@@ -8,6 +8,7 @@ export type AnuncioFeira = {
   mensagem: string;
   criadoEm: string;
   eventoId: number;
+  eventoFeiranteId: number;
   eventoTitulo: string;
   banca: string;
   logo: string | null;
@@ -50,6 +51,7 @@ export default async function pegarAnunciosDoDia(eventoId?: number, limite = 30)
         mensagem: anuncio.mensagem,
         criadoEm: anuncio.criado_em.toISOString(),
         eventoId: anuncio.eventoId,
+        eventoFeiranteId: anuncio.eventoFeiranteId,
         eventoTitulo: anuncio.evento.titulo,
         banca: perfil.nome_banca?.trim() || `${perfil.nome} ${perfil.sobrenome}`.trim(),
         logo: urlArquivo(perfil.logo_banca),

@@ -1,0 +1,234 @@
+.banca-pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+/* Cabeçalho da banca: toldo + logo + nome */
+.banca-hero {
+  --toldo: var(--main-color);
+  overflow: hidden;
+  background: var(--surface-1, #fff);
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+}
+
+.banca-hero.minha-banca {
+  --toldo: var(--green, #027a48);
+}
+
+.banca-hero .card-banca-toldo {
+  height: 30px;
+}
+
+.banca-hero-conteudo {
+  display: flex;
+  align-items: center;
+  gap: 1.5em;
+  padding: 2em 1.5em 1.5em;
+}
+
+.banca-hero-logo {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 140px;
+  height: 140px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+.banca-hero-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 0.6em;
+}
+
+.banca-hero-logo span {
+  display: grid;
+  place-items: center;
+  width: 70%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: var(--toldo);
+  color: #fff;
+  font-size: 2.6em;
+  font-weight: 800;
+}
+
+.banca-hero-info {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+
+.banca-hero-info .card-banca-selo {
+  position: static;
+  align-self: flex-start;
+}
+
+.banca-hero-info h1 {
+  margin: 0;
+  font-size: clamp(1.3rem, 1rem + 1.5vw, 2rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.banca-hero-dono,
+.banca-hero-feira {
+  margin: 0;
+  color: var(--text-gray);
+}
+
+.banca-hero-numeros {
+  display: flex;
+  gap: 1.2em;
+  margin-top: 0.4em;
+  color: var(--text-gray);
+}
+
+.banca-hero-numeros strong {
+  color: var(--color-dark);
+  font-size: 1.15em;
+}
+
+/* Lista de anúncios */
+.banca-anuncios h2 {
+  margin: 0 0 0.8em;
+  font-size: 1.2em;
+}
+
+.banca-anuncios ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-anuncio {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+  padding: 1.1em 1.2em;
+  background: var(--surface-1, #fff);
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-left: 5px solid var(--main-color);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.card-anuncio-mensagem {
+  margin: 0;
+  font-size: 1.05em;
+  line-height: 1.45;
+  color: var(--color-dark);
+  overflow-wrap: anywhere;
+}
+
+.card-anuncio-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.card-anuncio-rodape time {
+  color: var(--text-gray);
+  font-size: 0.85em;
+}
+
+.botao-curtir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.4em 0.9em;
+  border: 1px solid var(--border-soft, #d0d5dd);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-gray);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.botao-curtir span:first-child {
+  font-size: 1.25em;
+}
+
+.botao-curtir:hover {
+  border-color: #e0245e;
+  color: #e0245e;
+}
+
+.botao-curtir:active {
+  transform: scale(0.94);
+}
+
+.botao-curtir.curtido {
+  background: #fde8ef;
+  border-color: #e0245e;
+  color: #e0245e;
+}
+
+.botao-curtir.curtido span:first-child {
+  animation: curtir-pop 0.3s ease-out;
+}
+
+.botao-curtir.somente-leitura {
+  cursor: default;
+}
+
+.banca-anuncios-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5em;
+  padding: 2em 1em;
+  text-align: center;
+  color: var(--text-gray);
+  border: 1px dashed var(--border-soft, #d0d5dd);
+  border-radius: 14px;
+}
+
+.banca-anuncios-vazio span {
+  font-size: 2.5em;
+  color: var(--main-color);
+}
+
+@keyframes curtir-pop {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .banca-hero-conteudo {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .banca-hero-info {
+    align-items: center;
+  }
+
+  .banca-hero-info .card-banca-selo {
+    align-self: center;
+  }
+
+  .banca-hero-numeros {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao-curtir.curtido span:first-child {
+    animation: none;
+  }
+}
