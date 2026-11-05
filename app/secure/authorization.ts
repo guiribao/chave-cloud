@@ -86,7 +86,7 @@ export async function handleElements(document, papel, papelAdicional, path) {
     if (
       !funcionalidades[element.dataset.role] ||
       (!funcionalidades[element.dataset.role].includes(papel) &&
-        !aditionalRole.find((str) => funcionalidades[element.dataset.role] == str))
+        !aditionalRole.some((papelAdicional) => funcionalidades[element.dataset.role].includes(papelAdicional)))
     ) {
       element.parentNode?.removeChild(element);
     }
