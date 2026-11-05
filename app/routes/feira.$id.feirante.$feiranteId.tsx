@@ -1,6 +1,6 @@
 //@ts-nocheck
 import { FormaPagamento } from '@prisma/client';
-import { json, unstable_parseMultipartFormData } from '@remix-run/node';
+import { json } from '@remix-run/node';
 
 import type {
   ActionFunctionArgs,
@@ -31,7 +31,6 @@ import pegarPerfilPeloIdUsuario from '~/domain/Perfil/perfil-pelo-id-usuario.ser
 import { authenticator } from '~/secure/authentication.server';
 
 import uploadIcon from '~/assets/img/undraw/upload_photo.svg';
-import { getObjectUrlFromS3, s3UploaderHandler } from '~/storage/s3.service.server';
 import editarConfiguracoesBanca from '~/domain/Perfil/editar-perfil-feirante.server';
 import DeletingModal from '~/component/DeletingModal';
 import deletarOperacaoPorId from '~/domain/Financeiro/deletar-operacao-por-id.server';

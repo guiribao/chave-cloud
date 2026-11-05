@@ -43,7 +43,8 @@ export const FuncionalidadesPorPapel = {
     CARDS_FEIRANTE: [Papel.FEIRANTE],
     FEIRANTE_VENDA: [Papel.FEIRANTE],
     FEIRANTE_CONFIGURACAO: [Papel.FEIRANTE],
-    FEIRANTE_EXTRATO: [Papel.FEIRANTE]
+    FEIRANTE_EXTRATO: [Papel.FEIRANTE],
+    FEIRANTE_ANUNCIO: [Papel.FEIRANTE],
   },
   '/financeiro': {
     CARDS_FINANCEIRO_MES: [Papel.ADMIN],

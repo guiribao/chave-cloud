@@ -24,7 +24,9 @@ import Topbar from './component/layout/Topbar';
 import { authenticator } from './secure/authentication.server';
 import { Papel, Perfil, Usuario } from '@prisma/client';
 import pegarPerfilPeloIdUsuario from './domain/Perfil/perfil-pelo-id-usuario.server';
+import pegarFeirasAtuaisFeirante from './domain/Calendario/pegar-feiras-atuais-feirante.server';
 import { useEffect, useState } from 'react';
+import { isToday } from 'date-fns';
 import { createHashHistory } from 'history';
 import {
   canAccess,
@@ -55,6 +57,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   //@ts-ignore
   let usuario: Usuario = await authenticator.isAuthenticated(request);
   let perfil: Perfil | null = null;
+  let feirasAtuais: { id: number }[] = [];
+  let feiraHojeId: number | null = null;
 
   if (usuario?.id) {
     const symbol = Object.getOwnPropertySymbols(request)[1];
@@ -75,9 +79,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
       !canAccess(parsed_url.pathname, usuario.papel)
     )
       return redirect('/autorizacao');
+
+    if (perfil?.id) {
+      let feiras = await pegarFeirasAtuaisFeirante(perfil.id);
+      feirasAtuais = feiras.map(({ id }) => ({ id }));
+      feiraHojeId = feiras.find((feira) => isToday(feira.data_hora))?.id ?? null;
+    }
   }
 
-  return json({ ENV: getEnv(), usuario, perfil });
+  return json({ ENV: getEnv(), usuario, perfil, feirasAtuais, feiraHojeId });
 }
 
 export default function App() {

@@ -31,11 +31,19 @@ import pegarPerfilPeloIdUsuario from '~/domain/Perfil/perfil-pelo-id-usuario.ser
 import { authenticator } from '~/secure/authentication.server';
 
 import uploadIcon from '~/assets/img/undraw/upload_photo.svg';
-import { getObjectUrlFromS3, s3UploaderHandler } from '~/storage/s3.service.server';
+import { uploadHandler } from '~/storage/upload.server';
+import { removerArquivo, urlArquivo } from '~/storage/storage.server';
+import pegarFeirantePorFeiraPerfil from '~/domain/Calendario/pegar-feirante-por-feira-perfil';
+import criarAnuncioFeira, { proximoAnuncioPermitidoEm } from '~/domain/Anuncio/criar-anuncio-feira.server';
+import { ANUNCIO_MAX_CARACTERES } from '~/domain/Anuncio/regras-anuncio';
+import AnunciosFeira from '~/component/AnunciosFeira';
+import { isToday } from 'date-fns';
 import editarConfiguracoesBanca from '~/domain/Perfil/editar-perfil-feirante.server';
 import DeletingModal from '~/component/DeletingModal';
 import deletarOperacaoPorId from '~/domain/Financeiro/deletar-operacao-por-id.server';
 import editarPagamentoFeirante from '~/domain/Calendario/editar-pagamento-feirante.server';
+
+const NOME_BANCA_MAX = 40;
 
 export const meta: MetaFunction = ({ data }) => {
   return [
@@ -63,7 +71,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
   let { id } = params;
   let errors = {};
 
-  const form = await unstable_parseMultipartFormData(request, s3UploaderHandler);
+  let form: FormData;
+
+  try {
+    form = await unstable_parseMultipartFormData(request, uploadHandler);
+  } catch (error) {
+    return json(
+      { erro: (error as Error)?.message || 'Não foi possível enviar o arquivo.', abrir: 'config' },
+      { status: 400 }
+    );
+  }
 
   let action = form.get('_action') as string;
 
@@ -88,22 +105,68 @@ export async function action({ request, params }: ActionFunctionArgs) {
     );
   }
 
+  if (action === 'novo_anuncio') {
+    let perfilUsuario = await pegarPerfilPeloIdUsuario(usuario.id);
+    let eventoFeirante = perfilUsuario
+      ? await pegarFeirantePorFeiraPerfil(id, perfilUsuario.id)
+      : null;
+
+    if (!eventoFeirante)
+      return json({ erroAnuncio: 'Você não é feirante deste evento.' }, { status: 403 });
+
+    let resultado = await criarAnuncioFeira({
+      eventoId: Number(id),
+      eventoFeiranteId: eventoFeirante.id,
+      mensagem: form.get('mensagem') as string,
+    });
+
+    if (!resultado.ok) return json({ erroAnuncio: resultado.erro }, { status: 400 });
+
+    return json({ anuncioEnviado: true });
+  }
+
   if (action === 'editar_configuracao') {
     let perfil_id = form.get('perfil_id') as string;
-    let nome_banca = form.get('nome_banca') as string;
-    let logo_banca = form.get(`logo_banca_${perfil_id}`);
+    let nome_banca = ((form.get('nome_banca') as string) || '').trim().slice(0, NOME_BANCA_MAX);
+    let logo_banca = (form.get(`logo_banca_${perfil_id}`) as string) || null;
 
-    let evento_feirante_id = form.get('evento_feirante_id') as string;
+    // Os ids vêm do formulário: confere se pertencem ao usuário logado
+    let perfilUsuario = await pegarPerfilPeloIdUsuario(usuario.id);
+    let eventoFeirante = perfilUsuario
+      ? await pegarFeirantePorFeiraPerfil(id, perfilUsuario.id)
+      : null;
+
+    if (!eventoFeirante || String(eventoFeirante.perfilId) !== perfil_id) {
+      await removerArquivo(logo_banca);
+      return json(
+        { erro: 'Você não é feirante deste evento.', abrir: 'config' },
+        { status: 403 }
+      );
+    }
+
+    let evento_feirante_id = String(eventoFeirante.id);
     let pagamento_conta = form.get('pagamento_conta') as string;
     let pagamento_agencia = form.get('pagamento_agencia') as string;
     let pagamento_banco = form.get('pagamento_banco') as string;
     let pagamento_chave_pix = form.get('pagamento_chave_pix') as string;
 
-    await editarConfiguracoesBanca({
+    let perfilAtualizado = await editarConfiguracoesBanca({
       perfilId: Number(perfil_id),
       nomeBanca: nome_banca,
       logoBanca: logo_banca,
     });
+
+    if (!perfilAtualizado) {
+      await removerArquivo(logo_banca);
+      return json(
+        { erro: 'Não foi possível salvar as configurações da banca.', abrir: 'config' },
+        { status: 500 }
+      );
+    }
+
+    // Logo trocado: apaga o arquivo antigo
+    if (logo_banca && perfilUsuario?.logo_banca && perfilUsuario.logo_banca !== logo_banca)
+      await removerArquivo(perfilUsuario.logo_banca);
 
     await editarPagamentoFeirante({
       eventoFeiranteId: Number(evento_feirante_id),
@@ -135,21 +198,24 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   let feira = await pegarEventoFeiraPorId(id);
 
   feira.Feirantes.forEach((feirante) => {
-    feirante.perfil.logo_banca = feirante.perfil?.logo_banca
-      ? `https://chave-files.s3.sa-east-1.amazonaws.com/${feirante.perfil.logo_banca}`
-      : null;
+    feirante.perfil.logo_banca = urlArquivo(feirante.perfil?.logo_banca);
 
     if (feirante.perfilId == perfil.id) feira.eventoFeirante = feirante;
   });
 
-  if (feira.eventoFeirante)
-    feira.operacoes = await pegarOperacoesPorFeirante(feira?.eventoFeirante?.id);
+  let feiraHoje = isToday(new Date(feira.data_hora));
+  let proximoAnuncioEm = null;
 
-  return json({ feira, APP_URL });
+  if (feira.eventoFeirante) {
+    feira.operacoes = await pegarOperacoesPorFeirante(feira?.eventoFeirante?.id);
+    if (feiraHoje) proximoAnuncioEm = await proximoAnuncioPermitidoEm(feira.eventoFeirante.id);
+  }
+
+  return json({ feira, APP_URL, feiraHoje, proximoAnuncioEm });
 }
 
 export default function FeiraIndex() {
-  const { feira, APP_URL } = useLoaderData();
+  const { feira, APP_URL, feiraHoje, proximoAnuncioEm } = useLoaderData();
   const actionData = useActionData();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
@@ -162,6 +228,7 @@ export default function FeiraIndex() {
   let [valorReal, setValorReal] = useState(0);
 
   let [configurando, setConfigurando] = useState(params.has('config'));
+  let [previewLogo, setPreviewLogo] = useState<string | null>(null);
 
   // Dados para modal deletar item
   let [deleting, setDeleting] = useState(false);
@@ -297,13 +364,29 @@ export default function FeiraIndex() {
   }
 
   useEffect(() => {
-    setConsultando(consultando);
-    setVendendo(false);
-    setConfigurando(false);
-  }, [isSubmitting, params]);
+    // ?selling abre o formulário de venda (ex.: botão "Cadastrar venda" do topo)
+    let abrirVenda = params.has('selling') && !isSubmitting;
+    setConsultando(abrirVenda ? false : consultando);
+    setVendendo(abrirVenda);
+    // Em caso de erro no envio, mantém o formulário de configuração aberto
+    setConfigurando(!isSubmitting && actionData?.abrir === 'config');
+    setPreviewLogo(null);
+  }, [isSubmitting, params, actionData]);
+
+  function handleLogoChange(event) {
+    let arquivo = event.target.files?.[0];
+    setPreviewLogo(arquivo ? URL.createObjectURL(arquivo) : null);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (previewLogo) URL.revokeObjectURL(previewLogo);
+    };
+  }, [previewLogo]);
 
   return (
     <main>
+      <AnunciosFeira eventoId={feira.id} />
       {deleting && (
         <DeletingModal item={deletingItem} close={closeDeletingModal} entity='financeiro feira' />
       )}
@@ -318,6 +401,15 @@ export default function FeiraIndex() {
               <div className='feirante' data-role='CARDS_FEIRANTE'>
                 <Minicards cards={minicardsData} />
               </div>
+              {actionData?.erro && <p className='mensagem-erro'>{actionData.erro}</p>}
+
+              {feiraHoje && feira.eventoFeirante && (
+                <PainelAnuncio
+                  proximoAnuncioEm={proximoAnuncioEm}
+                  erro={actionData?.erroAnuncio}
+                  enviado={actionData?.anuncioEnviado}
+                />
+              )}
               {consultando && (
                 <div className='group view extrato' data-role='FEIRANTE_EXTRATO'>
                   <div className='form-view'>
@@ -605,15 +697,21 @@ export default function FeiraIndex() {
 
 
                     <div className='form-group'>
-                      <img src={uploadIcon} width={256} alt='Escolha um logotipo para sua banca' />
+                      <img
+                        src={previewLogo || feira.eventoFeirante.perfil?.logo_banca || uploadIcon}
+                        width={256}
+                        className='logo-banca-preview'
+                        alt='Logotipo da sua banca'
+                      />
                       <label htmlFor='logo_banca'>Escolha um logotipo para sua banca</label>
                       <input
                         type='file'
                         name={`logo_banca_${feira.eventoFeirante.perfil.id}`}
                         id='logo_banca'
-                        defaultValue={''}
+                        accept='image/jpeg,image/png'
+                        onChange={handleLogoChange}
                       />
-                      <p>É recomendada uma imagem de 500 x 500</p>
+                      <p>JPG ou PNG de até 3MB. É recomendada uma imagem de 500 x 500</p>
                     </div>
 
                     <div className='form-group'>
@@ -625,7 +723,9 @@ export default function FeiraIndex() {
                         name='nome_banca'
                         defaultValue={feira.eventoFeirante.perfil?.nome_banca || ''}
                         autoComplete='off'
+                        maxLength={NOME_BANCA_MAX}
                       />
+                      <p>Até {NOME_BANCA_MAX} caracteres</p>
                     </div>
 
                     <div className='form-disclaimer'>
@@ -710,9 +810,14 @@ export default function FeiraIndex() {
                 </div>
               </div>
 
-              <div className='group view informacoes'>
-                <div className='group-header'>
-                  <h1>Feirantes</h1>
+              <div className='group view informacoes vitrine'>
+                <div className='group-header vitrine-header'>
+                  <h1>Vitrine de bancas</h1>
+                  {feira.Feirantes.length > 0 && (
+                    <span className='vitrine-contador'>
+                      {feira.Feirantes.length} {feira.Feirantes.length === 1 ? 'banca' : 'bancas'}
+                    </span>
+                  )}
                 </div>
 
                 <div className='field-group detalhes-feirantes'>
@@ -720,17 +825,11 @@ export default function FeiraIndex() {
 
                   <ul>
                     {feira.Feirantes.map((feirante) => (
-                      <li className='field' key={feirante.id}>
-                        <img
-                          src={feirante.perfil?.logo_banca || `${APP_URL}/user.png`}
-                          alt={`Logo da barraca do feirante - ${feirante.perfil.nome} ${feirante.perfil.sobrenome}`}
-                          width={84}
-                        />
-                        <p>
-                          {feirante.perfil.nome_banca ||
-                            `${feirante.perfil.nome} ${feirante.perfil.sobrenome}`}
-                        </p>
-                      </li>
+                      <CardBanca
+                        key={feirante.id}
+                        feirante={feirante}
+                        minhaBanca={feirante.id === feira.eventoFeirante?.id}
+                      />
                     ))}
                   </ul>
                 </div>
@@ -741,5 +840,121 @@ export default function FeiraIndex() {
         </div>
       </div>
     </main>
+  );
+}
+
+function iniciais(nome: string) {
+  return nome
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0])
+    .join('')
+    .toUpperCase();
+}
+
+function CardBanca({ feirante, minhaBanca }) {
+  let [semLogo, setSemLogo] = useState(!feirante.perfil?.logo_banca);
+
+  let nomeFeirante = `${feirante.perfil.nome} ${feirante.perfil.sobrenome}`.trim();
+  let nomeBanca = feirante.perfil.nome_banca?.trim();
+  let nomeExibido = nomeBanca || nomeFeirante;
+
+  return (
+    <li className={`card-banca${minhaBanca ? ' minha-banca' : ''}`} title={nomeExibido}>
+      <div className='card-banca-toldo' aria-hidden='true' />
+
+      <div className='card-banca-vitrine'>
+        {semLogo ? (
+          <span className='card-banca-iniciais' aria-hidden='true'>
+            {iniciais(nomeExibido)}
+          </span>
+        ) : (
+          <img
+            src={feirante.perfil.logo_banca}
+            onError={() => setSemLogo(true)}
+            alt={`Logo da banca ${nomeExibido}`}
+            loading='lazy'
+          />
+        )}
+        {minhaBanca && <span className='card-banca-selo'>Sua banca</span>}
+      </div>
+
+      <div className='card-banca-info'>
+        <p className='card-banca-nome'>{nomeExibido}</p>
+        {nomeBanca && <p className='card-banca-dono'>por {nomeFeirante}</p>}
+      </div>
+    </li>
+  );
+}
+
+function PainelAnuncio({ proximoAnuncioEm, erro, enviado }) {
+  const navigation = useNavigation();
+  const enviando =
+    navigation.state === 'submitting' && navigation.formData?.get('_action') === 'novo_anuncio';
+  const formRef = useRef<HTMLFormElement>(null);
+
+  let [mensagem, setMensagem] = useState('');
+  let [agora, setAgora] = useState(() => Date.now());
+
+  let liberaEm = proximoAnuncioEm ? new Date(proximoAnuncioEm).getTime() : 0;
+  let restanteMs = Math.max(0, liberaEm - agora);
+  let bloqueado = restanteMs > 0;
+
+  // Contagem regressiva até o próximo anúncio permitido
+  useEffect(() => {
+    if (!liberaEm) return;
+    let timer = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [liberaEm]);
+
+  useEffect(() => {
+    if (enviado) setMensagem('');
+  }, [enviado]);
+
+  let minutos = Math.floor(restanteMs / 60000);
+  let segundos = Math.floor((restanteMs % 60000) / 1000)
+    .toString()
+    .padStart(2, '0');
+
+  return (
+    <Form method='post' encType='multipart/form-data' className='painel-anuncio' data-role='FEIRANTE_ANUNCIO' ref={formRef}>
+      <input type='hidden' name='_action' value='novo_anuncio' />
+
+      <div className='painel-anuncio-cabecalho'>
+        <span className='las la-bullhorn'></span>
+        <div>
+          <h2>Anuncie sua banca</h2>
+          <p>Sua mensagem aparece para todos nas páginas da feira e do calendário. 1 anúncio a cada 5 minutos.</p>
+        </div>
+      </div>
+
+      <div className='painel-anuncio-campo'>
+        <textarea
+          name='mensagem'
+          rows={2}
+          maxLength={ANUNCIO_MAX_CARACTERES}
+          placeholder='Ex.: Bolo de cenoura saindo do forno! Venha provar 🥕'
+          value={mensagem}
+          onChange={(e) => setMensagem(e.target.value)}
+          disabled={bloqueado || enviando}
+          required
+        />
+        <small>
+          {mensagem.length}/{ANUNCIO_MAX_CARACTERES}
+        </small>
+      </div>
+
+      {erro && <p className='mensagem-erro'>{erro}</p>}
+      {enviado && !erro && <p className='painel-anuncio-sucesso'>Anúncio publicado!</p>}
+
+      <button type='submit' disabled={bloqueado || enviando || !mensagem.trim()}>
+        {enviando
+          ? 'Publicando...'
+          : bloqueado
+            ? `Próximo anúncio em ${minutos}:${segundos}`
+            : 'Publicar anúncio'}
+      </button>
+    </Form>
   );
 }

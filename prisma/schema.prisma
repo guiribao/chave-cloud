@@ -138,6 +138,7 @@ model Eventos {
   atualizado_em    DateTime          @updatedAt @db.Timestamptz()
   Feirantes        Evento_Feirante[]
   Operacao         Operacao[]
+  Anuncios         Anuncio_Feira[]
 }
 
 model Evento_Feirante {
@@ -155,9 +156,25 @@ model Evento_Feirante {
 
   caixa_aberto Boolean @default(true)
 
+  Anuncios Anuncio_Feira[]
+
   @@unique([eventoId, perfilId])
   @@index([eventoId])
   @@index([perfilId])
+}
+
+// Mensagens de divulgação (merchan) que o feirante lança durante a feira
+model Anuncio_Feira {
+  id               Int             @id @default(autoincrement())
+  evento           Eventos         @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  eventoId         Int
+  eventoFeirante   Evento_Feirante @relation(fields: [eventoFeiranteId], references: [id], onDelete: Cascade)
+  eventoFeiranteId Int
+  mensagem         String          @db.VarChar(140)
+  criado_em        DateTime        @default(now()) @db.Timestamptz()
+
+  @@index([eventoId, criado_em])
+  @@index([eventoFeiranteId, criado_em])
 }
 
 enum FormaPagamento {

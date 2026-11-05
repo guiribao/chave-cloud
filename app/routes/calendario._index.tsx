@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
 import DeletingModal from '~/component/DeletingModal';
+import AnunciosFeira from '~/component/AnunciosFeira';
 import deletarEventoPorId from '~/domain/Calendario/deletar-evento-por-id.server';
 import pegarEventos from '~/domain/Calendario/pegar-eventos.server';
 
@@ -76,6 +77,7 @@ export default function CalendarioIndex() {
 
   return (
     <main>
+      <AnunciosFeira mostrarFeira />
       {deleting && (
         <DeletingModal item={deletingItem} close={closeDeletingModal} entity='calendario' />
       )}
