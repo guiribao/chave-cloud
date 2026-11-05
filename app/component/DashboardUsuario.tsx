@@ -97,10 +97,10 @@ export default function DashboardUsuario({ nome, dashboard }: DashboardUsuarioPr
         <div className='dash-coluna'>
           {/* ---------- Hoje ---------- */}
           <section className='dash-bloco'>
-            <header>
+            <div className='dash-bloco-cabecalho'>
               <h2>Hoje</h2>
               <Link to='/calendario'>Ver calendário</Link>
-            </header>
+            </div>
 
             {eventosHoje.length === 0 ? (
               <div className='dash-vazio'>
@@ -142,10 +142,10 @@ export default function DashboardUsuario({ nome, dashboard }: DashboardUsuarioPr
 
           {/* ---------- Próximos eventos ---------- */}
           <section className='dash-bloco'>
-            <header>
+            <div className='dash-bloco-cabecalho'>
               <h2>Próximos eventos</h2>
               <Link to='/calendario'>Todos</Link>
-            </header>
+            </div>
 
             {proximosEventos.length === 0 ? (
               <div className='dash-vazio'>
@@ -184,12 +184,12 @@ export default function DashboardUsuario({ nome, dashboard }: DashboardUsuarioPr
         <div className='dash-coluna'>
           {/* ---------- Notificações ---------- */}
           <section className='dash-bloco'>
-            <header>
+            <div className='dash-bloco-cabecalho'>
               <h2>
                 Notificações
                 {notificacoes.length > 0 && <span className='dash-contador'>{notificacoes.length}</span>}
               </h2>
-            </header>
+            </div>
 
             {notificacoes.length === 0 ? (
               <div className='dash-vazio'>
@@ -218,9 +218,9 @@ export default function DashboardUsuario({ nome, dashboard }: DashboardUsuarioPr
           {/* ---------- Minhas feiras ---------- */}
           {minhasFeiras.length > 0 && (
             <section className='dash-bloco'>
-              <header>
+              <div className='dash-bloco-cabecalho'>
                 <h2>Minhas feiras</h2>
-              </header>
+              </div>
 
               <ul className='dash-feiras'>
                 {minhasFeiras.map((feira) => (
@@ -276,9 +276,9 @@ export default function DashboardUsuario({ nome, dashboard }: DashboardUsuarioPr
           {/* ---------- Anúncios das bancas ---------- */}
           {anuncios.length > 0 && (
             <section className='dash-bloco'>
-              <header>
+              <div className='dash-bloco-cabecalho'>
                 <h2>Na feira agora</h2>
-              </header>
+              </div>
 
               <ul className='dash-anuncios'>
                 {anuncios.map((anuncio) => (

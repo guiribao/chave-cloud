@@ -215,7 +215,10 @@ export default async function pegarDashboardUsuario(perfil: {
   });
 
   return {
-    saudacao: `${format(agora, "EEEE, d 'de' LLLL", { locale: ptBR })}`,
+    saudacao: (() => {
+      const texto = format(agora, "EEEE, d 'de' LLLL", { locale: ptBR });
+      return texto.charAt(0).toUpperCase() + texto.slice(1);
+    })(),
     eventosHoje: eventosHoje.map(resumirEvento),
     proximosEventos: proximosEventos.map(resumirEvento),
     eventosSemana,

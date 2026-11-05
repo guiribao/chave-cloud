@@ -75,7 +75,6 @@
 
 .calendario-destaque span:last-child {
   opacity: 0.9;
-  text-transform: capitalize;
 }
 
 /* ---------- Lista agrupada por mês ---------- */
@@ -87,16 +86,21 @@
 }
 
 .calendario-mes h2 {
-  position: sticky;
-  top: 70px;
-  z-index: 2;
-  margin: 0 0 0.7em;
-  padding: 0.3em 0;
-  background: var(--surface-1, #fff);
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  margin: 0 0 0.8em;
   color: var(--color-dark);
   font-size: 1rem;
   font-weight: 700;
-  text-transform: capitalize;
+}
+
+/* Linha divisória depois do nome do mês */
+.calendario-mes h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
 }
 
 .calendario-mes ul {

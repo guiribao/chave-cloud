@@ -116,6 +116,8 @@ type EventoLista = {
   data_hora: string;
 };
 
+const primeiraMaiuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1);
+
 function agruparPorMes(eventos: EventoLista[]) {
   const grupos: { chave: string; titulo: string; eventos: EventoLista[] }[] = [];
 
@@ -125,7 +127,7 @@ function agruparPorMes(eventos: EventoLista[]) {
     let grupo = grupos.find((g) => g.chave === chave);
 
     if (!grupo) {
-      grupo = { chave, titulo: format(data, "LLLL 'de' yyyy", { locale: ptBR }), eventos: [] };
+      grupo = { chave, titulo: primeiraMaiuscula(format(data, "LLLL 'de' yyyy", { locale: ptBR })), eventos: [] };
       grupos.push(grupo);
     }
 
@@ -230,12 +232,14 @@ export default function CalendarioIndex() {
               <span className='calendario-destaque-rotulo'>Próximo evento</span>
               <strong>{proximoEvento.titulo}</strong>
               <span>
-                {format(new Date(proximoEvento.data_hora), "EEEE, d 'de' LLLL 'às' HH:mm", { locale: ptBR })}
+                {primeiraMaiuscula(
+                  format(new Date(proximoEvento.data_hora), "EEEE, d 'de' LLLL 'às' HH:mm", { locale: ptBR })
+                )}
               </span>
             </Link>
           )}
 
-          <div className='view-body calendario-lista'>
+          <div className='calendario-lista'>
             {grupos.length === 0 && (
               <div className='calendario-vazio'>
                 <span className='las la-calendar-times'></span>

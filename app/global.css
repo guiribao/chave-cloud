@@ -1569,3 +1569,60 @@ button.view-filters-header {
     margin-left: 0;
   }
 }
+
+/* ---------- Cursor: deixa claro o que é clicável ---------- */
+a[href],
+button,
+[role='button'],
+select,
+summary,
+label[for],
+input[type='file'],
+input[type='checkbox'],
+input[type='radio'],
+input[type='submit'],
+input[type='button'],
+input[type='reset'],
+.card-clicavel,
+.card-clicavel * {
+  cursor: pointer;
+}
+
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='number'],
+input[type='tel'],
+textarea {
+  cursor: text;
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+textarea:disabled,
+[aria-disabled='true'],
+[aria-disabled='true'] * {
+  cursor: not-allowed;
+}
+
+/* Links desabilitados (ex.: paginação na primeira/última página) */
+a[aria-disabled='true'] {
+  opacity: 0.45;
+}
+
+/* Elementos de leitura que parecem botões */
+.botao-curtir.somente-leitura,
+.botao-curtir.somente-leitura * {
+  cursor: default;
+}
+
+/* Feedback de clique */
+a[href]:focus-visible,
+button:focus-visible,
+select:focus-visible,
+[role='button']:focus-visible {
+  outline: 3px solid rgba(55, 114, 255, 0.45);
+  outline-offset: 2px;
+}
